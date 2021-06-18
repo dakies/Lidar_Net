@@ -42,7 +42,8 @@ def label2corners(label):
     row3 = torch.cat([-sin, zeros, cos], dim=-1)  # (N, 3)
     rot_T = torch.stack([row1, row2, row3], dim=-2)  # (N, 2, 2)
 
-    corners3d = torch.bmm(corners, rot_T)  # (N, 8, 2)
+    corners3d = torch.matmul(rot_T, torch.transpose(corners, 1, 2))  # (N, 8, 2)
+    corners3d = torch.transpose(corners3d,1,2)
 
     corners3d[..., 0] += x.unsqueeze(-1)
     corners3d[..., 1] += y.unsqueeze(-1)
@@ -93,4 +94,9 @@ def compute_recall(pred, target, threshold):
     output
         recall (float) recall for the scene
     """
-    return get_iou(pred, target)[get_iou(pred, target) > threshold]
+    iou = get_iou(pred, target)
+    tp = iou > threshold
+    tp = torch.sum(tp, dim=0).clamp_max(1)
+    tp = torch.sum(tp)
+    fntp = target.shape[0]
+    return tp/fntp
