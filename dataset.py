@@ -11,11 +11,12 @@ import h5py
 from utils.task2 import roi_pool
 from utils.task3 import sample_proposals
 
+
 class DatasetLoader(Dataset):
     def __init__(self, config, split):
         self.config, self.split = config, split
         root_dir = config['root_dir']
-        assert(os.path.isdir(root_dir))
+        assert (os.path.isdir(root_dir))
 
         t_path = os.path.join(root_dir, f'project3_{split}.txt')
         self.frames = open(t_path).read().splitlines()
@@ -34,7 +35,7 @@ class DatasetLoader(Dataset):
                                                        feat=self.get_data(idx, 'features'),
                                                        config=self.config)
         if self.split == 'test':
-            return {'frame': frame, 'input': np.concatenate((pooled_xyz, pooled_feat),-1)}
+            return {'frame': frame, 'input': np.concatenate((pooled_xyz, pooled_feat), -1)}
 
         target = self.get_data(idx, 'target')
         assinged_target, xyz, feat, iou = sample_proposals(pred=valid_pred,
@@ -42,15 +43,15 @@ class DatasetLoader(Dataset):
                                                            xyz=pooled_xyz,
                                                            feat=pooled_feat,
                                                            config=self.config,
-                                                           train=self.split=='train')
+                                                           train=self.split == 'train')
         sampled_frame = {
-            'input': np.concatenate((xyz, feat),-1),
+            'input': np.concatenate((xyz, feat), -1),
             'assinged_target': assinged_target,
             'iou': iou
         }
         if self.split == 'train':
             return sampled_frame
-        
+
         sampled_frame.update({
             'frame': frame,
             'target': target,
@@ -86,16 +87,16 @@ class DatasetLoader(Dataset):
         # Rearrange detection data to the format: (x,y,z,h,w,l,ry)
         if key in ['detections', 'target']:
             if len(data) == 0:
-                return np.asarray([-1,-1,-1,-100,-100,-100,-1], dtype=np.float32).reshape(1,7)
-            data = np.concatenate((data[...,10:13],               # (x,y,z)
-                                   data[...,7:10],                # (h,w,l)
-                                   data[...,13].reshape(-1,1)),   # (ry)
-                                   axis=1)
+                return np.asarray([-1, -1, -1, -100, -100, -100, -1], dtype=np.float32).reshape(1, 7)
+            data = np.concatenate((data[..., 10:13],  # (x,y,z)
+                                   data[..., 7:10],  # (h,w,l)
+                                   data[..., 13].reshape(-1, 1)),  # (ry)
+                                  axis=1)
         # Discard all zero detections
         if key == 'detections':
-            data = data[(np.abs(data).sum(1)>0)]
+            data = data[(np.abs(data).sum(1) > 0)]
         if len(data.shape) == 1:
-            data = data.reshape(-1,1)
+            data = data.reshape(-1, 1)
         return data
 
     def collate_batch(self, batch):
@@ -107,8 +108,8 @@ class DatasetLoader(Dataset):
         batch_size = batch.__len__()
         ans_dict = batch[0]
         for key in ans_dict.keys():
-            for b in range(1,batch_size):
-                ans_dict[key] = np.concatenate((ans_dict[key], batch[b][key]),0,dtype=np.float32)
+            for b in range(1, batch_size):
+                ans_dict[key] = np.concatenate((ans_dict[key], batch[b][key]), 0, dtype=np.float32)
         for key in ans_dict.keys():
             if key not in ['target', 'points', 'frame']:
                 ans_dict[key] = torch.from_numpy(ans_dict[key])
